@@ -536,6 +536,7 @@ code {
 .link-btn.danger { color: var(--red); }
 
 /* Modal */
+[hidden] { display: none !important; }
 .modal {
   position: fixed;
   inset: 0;
