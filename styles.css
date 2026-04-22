@@ -368,6 +368,7 @@ body.with-ai .stage { margin-right: var(--ai-w); }
   background: var(--bg-2); border-left: 1px solid var(--line);
   box-shadow: var(--shadow); overflow-y: auto;
   transform: translateX(100%); transition: transform 220ms ease;
+  z-index: 2;
 }
 .drawer[aria-hidden="false"] .drawer-inner { transform: translateX(0); }
 .drawer-head {
