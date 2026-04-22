@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Cleanweb — search without the noise</title>
 <link rel="stylesheet" href="/styles.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='40' fill='%23D4A44C'/%3E%3Ccircle cx='50' cy='50' r='22' fill='%230A0E1A'/%3E%3C/svg%3E" />
 </head>
 <body>
@@ -20,59 +22,125 @@
     <button class="tab" data-mode="videos">Videos</button>
     <button class="tab" data-mode="images">Images</button>
     <button class="tab" data-mode="news">News</button>
+    <button class="tab tab-sep" data-view="collections">Collections</button>
   </nav>
-  <button class="icon-btn" id="settingsBtn" title="Settings" aria-label="Settings">
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
-  </button>
+  <div class="top-right">
+    <button class="icon-btn" id="aiToggleBtn" title="AI sidebar" aria-label="AI sidebar">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 0 1 4 4v1h-8V6a4 4 0 0 1 4-4z"/><path d="M5 10h14l-1 9a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2l-1-9z"/><circle cx="9" cy="14" r="1"/><circle cx="15" cy="14" r="1"/></svg>
+    </button>
+    <button class="icon-btn" id="settingsBtn" title="Settings" aria-label="Settings">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+    </button>
+  </div>
 </header>
 
-<main class="stage" id="stage">
-  <section class="hero" id="hero">
-    <h1 class="hero-title">Search without the noise.</h1>
-    <p class="hero-sub">No ads. No directory spam. No SEO slop. Just answers.</p>
-    <form class="search-form big" id="searchForm">
-      <input
-        type="text"
-        id="searchInput"
-        class="search-input"
-        placeholder="Try: window cleaner Newtownards"
-        autocomplete="off"
-        autofocus
-      />
-      <button type="submit" class="search-btn" aria-label="Search">
-        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-      </button>
-    </form>
-    <div class="hero-hints">
-      <span class="hint-label">Try</span>
-      <button class="hint" data-q="window cleaner Newtownards" data-mode="local">window cleaner Newtownards</button>
-      <button class="hint" data-q="best sourdough recipe" data-mode="web">best sourdough recipe</button>
-      <button class="hint" data-q="bird of paradise plant" data-mode="images">bird of paradise plant</button>
-    </div>
-  </section>
+<main class="app-shell" id="appShell">
+  <div class="stage" id="stage">
+    <section class="hero" id="hero">
+      <h1 class="hero-title">Search without the noise.</h1>
+      <p class="hero-sub">No ads. No directory spam. Saved by your family, not strangers.</p>
+      <form class="search-form big" id="searchForm">
+        <input type="text" id="searchInput" class="search-input"
+               placeholder="Try: window cleaner Newtownards" autocomplete="off" autofocus />
+        <button type="submit" class="search-btn" aria-label="Search">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        </button>
+      </form>
+      <div class="hero-hints">
+        <span class="hint-label">Try</span>
+        <button class="hint" data-q="window cleaner Newtownards" data-mode="local">window cleaner Newtownards</button>
+        <button class="hint" data-q="best sourdough recipe" data-mode="web">best sourdough recipe</button>
+        <button class="hint" data-q="bird of paradise plant" data-mode="images">bird of paradise plant</button>
+      </div>
+      <div class="hero-family" id="heroFamily" hidden></div>
+    </section>
 
-  <section class="results-wrap" id="resultsWrap" hidden>
-    <form class="search-form slim" id="searchFormSlim">
-      <input type="text" id="searchInputSlim" class="search-input" autocomplete="off" />
-      <button type="submit" class="search-btn" aria-label="Search">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+    <section class="results-wrap" id="resultsWrap" hidden>
+      <form class="search-form slim" id="searchFormSlim">
+        <input type="text" id="searchInputSlim" class="search-input" autocomplete="off" />
+        <button type="submit" class="search-btn" aria-label="Search">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        </button>
+      </form>
+
+      <div class="meta-bar">
+        <span id="resultMeta" class="result-meta"></span>
+        <div class="meta-right">
+          <span id="filteredMeta" class="filtered-meta"></span>
+          <button class="view-toggle" id="viewToggle" hidden>Map view</button>
+        </div>
+      </div>
+
+      <div id="results" class="results"></div>
+      <div id="map" class="map" hidden></div>
+
+      <div id="loader" class="loader" hidden>
+        <div class="spinner"></div>
+        <span>searching…</span>
+      </div>
+      <div id="empty" class="empty" hidden>
+        <p>No clean results. Try a different query or relax the filters in settings.</p>
+      </div>
+      <div id="errorBox" class="error-box" hidden></div>
+    </section>
+
+    <!-- Collections view -->
+    <section class="collections-wrap" id="collectionsWrap" hidden>
+      <h1 class="page-title">Your family's collections</h1>
+      <div id="noFamilyBlock" class="empty" hidden>
+        <p>You need a family code to use Collections. Open settings to create one or join your family's code.</p>
+        <button class="link-btn" id="noFamilyOpenSettings">Open settings →</button>
+      </div>
+      <div id="collectionsList" class="collections-list"></div>
+      <div id="collectionView" class="collection-view" hidden>
+        <button class="back-btn" id="collectionBack">← Back</button>
+        <h2 id="collectionName"></h2>
+        <div id="collectionItems" class="results"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- AI sidebar -->
+  <aside class="ai-sidebar" id="aiSidebar" aria-hidden="true">
+    <header class="ai-head">
+      <div class="ai-title">
+        <span class="brand-mark small"></span>
+        <span>AI assistant</span>
+        <span class="pill" id="aiStatus">not connected</span>
+      </div>
+      <button class="icon-btn" id="aiClose" aria-label="Close">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </header>
+    <div class="ai-body" id="aiBody">
+      <div class="ai-empty">
+        Runs on your Mac via LM Studio. Nothing leaves the house.
+        <div class="ai-presets">
+          <button data-preset="summarise">Summarise these results</button>
+          <button data-preset="compare">Compare the top 3</button>
+          <button data-preset="recommend">Which would you pick?</button>
+        </div>
+      </div>
+    </div>
+    <form class="ai-input" id="aiForm">
+      <input type="text" id="aiText" placeholder="Ask about these results…" autocomplete="off" />
+      <button type="submit" aria-label="Send">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4 20-7z"/></svg>
       </button>
     </form>
-    <div class="meta-bar">
-      <span id="resultMeta" class="result-meta"></span>
-      <span id="filteredMeta" class="filtered-meta"></span>
-    </div>
-    <div id="results" class="results"></div>
-    <div id="loader" class="loader" hidden>
-      <div class="spinner"></div>
-      <span>searching…</span>
-    </div>
-    <div id="empty" class="empty" hidden>
-      <p>No clean results. Try a different query or relax the filters in settings.</p>
-    </div>
-    <div id="errorBox" class="error-box" hidden></div>
-  </section>
+  </aside>
 </main>
+
+<!-- Local action bar (only shown when items are selected in Local mode) -->
+<div class="action-bar" id="actionBar" hidden>
+  <span class="ab-count" id="abCount">0 selected</span>
+  <button id="abWhatsapp">WhatsApp each</button>
+  <button id="abEmail">Draft email</button>
+  <button id="abCsv">Export CSV</button>
+  <button id="abCopy">Copy contacts</button>
+  <button class="ab-primary" id="abSave">Add to collection</button>
+  <button class="ab-ghost" id="abClear">Clear</button>
+</div>
 
 <!-- Settings drawer -->
 <aside class="drawer" id="drawer" aria-hidden="true">
@@ -85,15 +153,61 @@
     </header>
 
     <section class="drawer-section">
-      <h3>API key</h3>
-      <p class="muted">Cleanweb uses Serper.dev (Google results). Free tier: 2,500 searches, no card required.</p>
-      <p class="muted small">Set <code>SERPER_API_KEY</code> in Vercel env vars. Running locally? Put it in <code>.env</code>.</p>
+      <h3>Family</h3>
+      <p class="muted">Your family share saved results. Nobody outside your family can see them — they'd need your code.</p>
+      <div id="familyIdle">
+        <label class="row stack">
+          <span class="muted small">Your name</span>
+          <input type="text" id="familyName" placeholder="Mum / Dad / your name" maxlength="40" />
+        </label>
+        <div class="row gap">
+          <button class="btn-solid" id="familyCreateBtn">Create family</button>
+          <span class="muted small">or</span>
+          <input type="text" id="familyJoinCode" placeholder="Enter code…" />
+          <button class="btn-ghost" id="familyJoinBtn">Join</button>
+        </div>
+      </div>
+      <div id="familyActive" hidden>
+        <p class="muted small">Signed in as <strong id="familyMeName"></strong></p>
+        <div class="code-box">
+          <code id="familyCodeText"></code>
+          <button class="link-btn" id="familyCopyBtn">Copy</button>
+        </div>
+        <p class="muted small">Share this code with family. They enter it in Settings → Family → Join.</p>
+        <p class="muted small">Members: <span id="familyMembers"></span></p>
+        <button class="link-btn danger" id="familyLeaveBtn">Leave family</button>
+      </div>
+    </section>
+
+    <section class="drawer-section">
+      <h3>AI sidebar (LM Studio)</h3>
+      <p class="muted">Point at your Mac's LM Studio for a private sidebar that never leaves home.</p>
+      <label class="row stack">
+        <span class="muted small">Base URL</span>
+        <input type="text" id="aiUrl" placeholder="http://localhost:1234/v1" />
+      </label>
+      <label class="row stack">
+        <span class="muted small">Model (optional)</span>
+        <input type="text" id="aiModel" placeholder="auto-detect" />
+      </label>
+      <label class="row">
+        <input type="checkbox" id="aiEnabled" />
+        <span>Enable AI sidebar</span>
+      </label>
+      <p class="muted small">In LM Studio → Server → enable CORS, then load any chat model.</p>
+      <button class="link-btn" id="aiTestBtn">Test connection</button>
+      <span id="aiTestResult" class="muted small"></span>
+    </section>
+
+    <section class="drawer-section">
+      <h3>API key (Serper)</h3>
+      <p class="muted small">Set <code>SERPER_API_KEY</code> in Vercel env. Free tier: 2,500 searches on signup.</p>
       <a class="link-btn" href="https://serper.dev" target="_blank" rel="noopener">Get a key →</a>
     </section>
 
     <section class="drawer-section">
       <h3>Blocklist <span id="blockCount" class="pill"></span></h3>
-      <p class="muted">Domains filtered out of every result set. Add the garbage, keep it gone.</p>
+      <p class="muted">Domains filtered out of every result set.</p>
       <div class="chip-row" id="blockChips"></div>
       <form class="add-form" id="addBlockForm">
         <input type="text" id="addBlockInput" placeholder="e.g. yell.com" />
@@ -117,32 +231,51 @@
         <input type="checkbox" id="prefSafe" checked />
         <span>Safe search</span>
       </label>
-      <label class="row">
-        <input type="checkbox" id="prefFamily" />
-        <span>Show family notes on results</span>
-      </label>
     </section>
 
     <section class="drawer-section">
-      <button class="link-btn danger" id="resetBtn">Reset all settings</button>
+      <button class="link-btn danger" id="resetBtn">Reset local settings</button>
     </section>
   </div>
   <div class="drawer-scrim" id="drawerScrim"></div>
 </aside>
 
-<!-- Note modal -->
-<div class="modal" id="noteModal" hidden>
+<!-- Save to collection modal -->
+<div class="modal" id="saveModal" hidden>
   <div class="modal-card">
-    <h3>Note for your family</h3>
-    <p class="muted small" id="noteUrl"></p>
-    <textarea id="noteText" rows="4" placeholder="e.g. Used this window cleaner — excellent"></textarea>
+    <h3 id="saveModalTitle">Save to collection</h3>
+    <p class="muted small" id="saveModalSub"></p>
+    <label class="row stack">
+      <span class="muted small">Collection</span>
+      <input type="text" id="saveCollection" list="collectionSuggest" placeholder="e.g. Local Trades" />
+      <datalist id="collectionSuggest"></datalist>
+    </label>
+    <label class="row stack">
+      <span class="muted small">Note (optional)</span>
+      <textarea id="saveNote" rows="3" placeholder="e.g. Used them April 2026 — great"></textarea>
+    </label>
+    <label class="row stack">
+      <span class="muted small">Rating</span>
+      <div class="stars" id="saveStars">
+        <button type="button" data-v="1">★</button>
+        <button type="button" data-v="2">★</button>
+        <button type="button" data-v="3">★</button>
+        <button type="button" data-v="4">★</button>
+        <button type="button" data-v="5">★</button>
+      </div>
+    </label>
     <div class="modal-actions">
-      <button class="btn-ghost" id="noteCancel">Cancel</button>
-      <button class="btn-solid" id="noteSave">Save</button>
+      <button class="btn-ghost" id="saveCancel">Cancel</button>
+      <button class="btn-solid" id="saveConfirm">Save</button>
     </div>
   </div>
 </div>
 
+<!-- Toast -->
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="/app.js"></script>
 </body>
 </html>

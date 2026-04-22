@@ -142,6 +142,10 @@ function normaliseResults(data, mode) {
         phone: p.phoneNumber,
         address: p.address,
         rating: p.rating,
+        ratingCount: p.ratingCount,
+        category: p.category,
+        lat: p.latitude ?? p.lat ?? null,
+        lng: p.longitude ?? p.lng ?? null,
       };
     });
   }
