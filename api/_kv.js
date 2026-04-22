@@ -1,15 +1,19 @@
-// Shared KV client + helpers. Uses @vercel/kv which reads KV_REST_API_URL +
-// KV_REST_API_TOKEN from env (auto-injected when you provision a KV store
-// from the Vercel dashboard).
+// Shared Redis client + helpers.
+// Uses @upstash/redis which reads UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN
+// by default. Falls back to KV_REST_API_* if Vercel provisions those instead.
 
-import { kv } from '@vercel/kv';
+import { Redis } from '@upstash/redis';
+
+const URL   = process.env.UPSTASH_REDIS_REST_URL   || process.env.KV_REST_API_URL;
+const TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
+
+export const kv = (URL && TOKEN) ? new Redis({ url: URL, token: TOKEN }) : null;
 
 export function isConfigured() {
-  return !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+  return !!(URL && TOKEN);
 }
 
 // --- Family codes ---
-// Human-friendly, unguessable. 12 chars from a reduced alphabet (no 0/O/1/I/L).
 const ALPHA = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 export function newFamilyCode() {
   let s = '';
@@ -48,5 +52,3 @@ export const K = {
   collection: (code, name) => `family:${code}:collection:${slug(name)}`,
   urlIndex:   code => `family:${code}:urls`,
 };
-
-export { kv };
