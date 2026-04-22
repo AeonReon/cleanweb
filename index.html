@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Cleanweb — search without the noise</title>
+<link rel="stylesheet" href="/styles.css" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='40' fill='%23D4A44C'/%3E%3Ccircle cx='50' cy='50' r='22' fill='%230A0E1A'/%3E%3C/svg%3E" />
+</head>
+<body>
+
+<header class="topbar">
+  <a href="/" class="brand">
+    <span class="brand-mark"></span>
+    <span class="brand-name">cleanweb</span>
+  </a>
+  <nav class="tabs" id="tabs">
+    <button class="tab active" data-mode="web">Web</button>
+    <button class="tab" data-mode="local">Local</button>
+    <button class="tab" data-mode="videos">Videos</button>
+    <button class="tab" data-mode="images">Images</button>
+    <button class="tab" data-mode="news">News</button>
+  </nav>
+  <button class="icon-btn" id="settingsBtn" title="Settings" aria-label="Settings">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+  </button>
+</header>
+
+<main class="stage" id="stage">
+  <section class="hero" id="hero">
+    <h1 class="hero-title">Search without the noise.</h1>
+    <p class="hero-sub">No ads. No directory spam. No SEO slop. Just answers.</p>
+    <form class="search-form big" id="searchForm">
+      <input
+        type="text"
+        id="searchInput"
+        class="search-input"
+        placeholder="Try: window cleaner Newtownards"
+        autocomplete="off"
+        autofocus
+      />
+      <button type="submit" class="search-btn" aria-label="Search">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      </button>
+    </form>
+    <div class="hero-hints">
+      <span class="hint-label">Try</span>
+      <button class="hint" data-q="window cleaner Newtownards" data-mode="local">window cleaner Newtownards</button>
+      <button class="hint" data-q="best sourdough recipe" data-mode="web">best sourdough recipe</button>
+      <button class="hint" data-q="bird of paradise plant" data-mode="images">bird of paradise plant</button>
+    </div>
+  </section>
+
+  <section class="results-wrap" id="resultsWrap" hidden>
+    <form class="search-form slim" id="searchFormSlim">
+      <input type="text" id="searchInputSlim" class="search-input" autocomplete="off" />
+      <button type="submit" class="search-btn" aria-label="Search">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      </button>
+    </form>
+    <div class="meta-bar">
+      <span id="resultMeta" class="result-meta"></span>
+      <span id="filteredMeta" class="filtered-meta"></span>
+    </div>
+    <div id="results" class="results"></div>
+    <div id="loader" class="loader" hidden>
+      <div class="spinner"></div>
+      <span>searching…</span>
+    </div>
+    <div id="empty" class="empty" hidden>
+      <p>No clean results. Try a different query or relax the filters in settings.</p>
+    </div>
+    <div id="errorBox" class="error-box" hidden></div>
+  </section>
+</main>
+
+<!-- Settings drawer -->
+<aside class="drawer" id="drawer" aria-hidden="true">
+  <div class="drawer-inner">
+    <header class="drawer-head">
+      <h2>Settings</h2>
+      <button class="icon-btn" id="drawerClose" aria-label="Close">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </header>
+
+    <section class="drawer-section">
+      <h3>API key</h3>
+      <p class="muted">Cleanweb uses the Brave Search API. Free tier: 2,000 queries/month.</p>
+      <p class="muted small">Set <code>BRAVE_API_KEY</code> in Vercel env vars. Running locally? Put it in <code>.env</code>.</p>
+      <a class="link-btn" href="https://api.search.brave.com/app/keys" target="_blank" rel="noopener">Get a key →</a>
+    </section>
+
+    <section class="drawer-section">
+      <h3>Blocklist <span id="blockCount" class="pill"></span></h3>
+      <p class="muted">Domains filtered out of every result set. Add the garbage, keep it gone.</p>
+      <div class="chip-row" id="blockChips"></div>
+      <form class="add-form" id="addBlockForm">
+        <input type="text" id="addBlockInput" placeholder="e.g. yell.com" />
+        <button type="submit">Block</button>
+      </form>
+    </section>
+
+    <section class="drawer-section">
+      <h3>Trusted boosts <span id="trustCount" class="pill"></span></h3>
+      <p class="muted">Pin these to the top when they appear.</p>
+      <div class="chip-row" id="trustChips"></div>
+      <form class="add-form" id="addTrustForm">
+        <input type="text" id="addTrustInput" placeholder="e.g. wikipedia.org" />
+        <button type="submit">Trust</button>
+      </form>
+    </section>
+
+    <section class="drawer-section">
+      <h3>Preferences</h3>
+      <label class="row">
+        <input type="checkbox" id="prefSafe" checked />
+        <span>Safe search</span>
+      </label>
+      <label class="row">
+        <input type="checkbox" id="prefFamily" />
+        <span>Show family notes on results</span>
+      </label>
+    </section>
+
+    <section class="drawer-section">
+      <button class="link-btn danger" id="resetBtn">Reset all settings</button>
+    </section>
+  </div>
+  <div class="drawer-scrim" id="drawerScrim"></div>
+</aside>
+
+<!-- Note modal -->
+<div class="modal" id="noteModal" hidden>
+  <div class="modal-card">
+    <h3>Note for your family</h3>
+    <p class="muted small" id="noteUrl"></p>
+    <textarea id="noteText" rows="4" placeholder="e.g. Used this window cleaner — excellent"></textarea>
+    <div class="modal-actions">
+      <button class="btn-ghost" id="noteCancel">Cancel</button>
+      <button class="btn-solid" id="noteSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>

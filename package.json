@@ -1,0 +1,13 @@
+{
+  "name": "cleanweb",
+  "version": "0.1.0",
+  "description": "Search without the noise — custom search frontend with ruthless filtering.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "vercel dev"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
