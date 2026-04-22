@@ -143,11 +143,11 @@ async function runSearch() {
 
 function showError(msg) {
   errorBox.hidden = false;
-  if (msg && msg.toLowerCase().includes('brave_api_key')) {
+  if (msg && msg.toLowerCase().includes('serper_api_key')) {
     errorBox.innerHTML = `
-      <strong>Brave API key not set.</strong>
-      <p>Add <code>BRAVE_API_KEY</code> in Vercel env vars (or <code>.env</code> locally). Free tier: 2,000 queries/month.</p>
-      <a href="https://api.search.brave.com/app/keys" target="_blank" rel="noopener">Get a key →</a>
+      <strong>Serper API key not set.</strong>
+      <p>Add <code>SERPER_API_KEY</code> in Vercel env vars (or <code>.env</code> locally). Free tier: 2,500 searches, no card required.</p>
+      <a href="https://serper.dev" target="_blank" rel="noopener">Get a key →</a>
     `;
   } else {
     errorBox.textContent = msg;

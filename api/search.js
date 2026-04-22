@@ -1,17 +1,16 @@
-// Cleanweb search proxy — calls Brave Search API, applies user blocklist + trusted boosts,
-// and returns a shape the frontend can render.
+// Cleanweb search proxy — calls Serper.dev (Google-powered), applies user
+// blocklist + trusted boosts, and returns a shape the frontend can render.
 //
-// Required env var: BRAVE_API_KEY  (https://api.search.brave.com/app/keys)
+// Required env var: SERPER_API_KEY  (https://serper.dev)
 
 const ENDPOINTS = {
-  web:    'https://api.search.brave.com/res/v1/web/search',
-  local:  'https://api.search.brave.com/res/v1/web/search',   // local = web search with locality bias
-  news:   'https://api.search.brave.com/res/v1/news/search',
-  videos: 'https://api.search.brave.com/res/v1/videos/search',
-  images: 'https://api.search.brave.com/res/v1/images/search',
+  web:    'https://google.serper.dev/search',
+  local:  'https://google.serper.dev/places',
+  news:   'https://google.serper.dev/news',
+  videos: 'https://google.serper.dev/videos',
+  images: 'https://google.serper.dev/images',
 };
 
-// Spam signals: titles/snippets containing these phrases are heavily downweighted.
 const SPAM_PHRASES = [
   'top 10', 'top ten', 'best of', 'near you', 'near me',
   'find local', 'compare prices', 'quotes from',
@@ -25,9 +24,9 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const apiKey = process.env.BRAVE_API_KEY;
+  const apiKey = process.env.SERPER_API_KEY;
   if (!apiKey) {
-    return res.status(500).json({ error: 'BRAVE_API_KEY not set' });
+    return res.status(500).json({ error: 'SERPER_API_KEY not set' });
   }
 
   const body = await readJson(req);
@@ -39,35 +38,36 @@ export default async function handler(req, res) {
 
   if (!q) return res.status(400).json({ error: 'Missing query' });
 
-  const url = new URL(ENDPOINTS[mode]);
-  url.searchParams.set('q', q);
-  url.searchParams.set('count', mode === 'images' || mode === 'videos' ? '30' : '20');
-  url.searchParams.set('safesearch', safe ? 'moderate' : 'off');
-  if (mode === 'local') {
-    url.searchParams.set('country', 'GB');
-  }
+  const payload = {
+    q,
+    gl: 'gb',
+    hl: 'en',
+    num: mode === 'images' || mode === 'videos' ? 30 : 20,
+  };
+  if (safe) payload.safe = 'active';
 
-  let braveRes;
+  let upstream;
   try {
-    braveRes = await fetch(url, {
+    upstream = await fetch(ENDPOINTS[mode], {
+      method: 'POST',
       headers: {
-        'Accept': 'application/json',
-        'Accept-Encoding': 'gzip',
-        'X-Subscription-Token': apiKey,
+        'X-API-KEY': apiKey,
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify(payload),
     });
   } catch (e) {
     return res.status(502).json({ error: `Upstream error: ${e.message}` });
   }
 
-  if (!braveRes.ok) {
-    const text = await braveRes.text().catch(() => '');
-    return res.status(braveRes.status).json({
-      error: `Brave API ${braveRes.status}: ${text.slice(0, 240) || braveRes.statusText}`,
+  if (!upstream.ok) {
+    const text = await upstream.text().catch(() => '');
+    return res.status(upstream.status).json({
+      error: `Serper API ${upstream.status}: ${text.slice(0, 240) || upstream.statusText}`,
     });
   }
 
-  const data = await braveRes.json();
+  const data = await upstream.json();
   const normalised = normaliseResults(data, mode);
   const { kept, filtered } = applyFilters(normalised, { block, trust, mode });
 
@@ -113,48 +113,78 @@ function matches(host, list) {
 }
 
 function normaliseResults(data, mode) {
-  if (mode === 'web' || mode === 'local') {
-    const web = (data.web && data.web.results) || [];
-    return web.map(r => ({
+  if (mode === 'web') {
+    const organic = data.organic || [];
+    return organic.map(r => ({
       title: r.title,
-      url: r.url,
-      description: r.description || (r.extra_snippets && r.extra_snippets[0]) || '',
-      host: hostOf(r.url),
-      favicon: r.meta_url && r.meta_url.favicon,
-      age: r.age,
+      url: r.link,
+      description: r.snippet || '',
+      host: hostOf(r.link),
+      favicon: r.favicon,
     }));
   }
+
+  if (mode === 'local') {
+    // Serper /places — actual business listings. This is the killer feature.
+    const places = data.places || [];
+    return places.map(p => {
+      const parts = [];
+      if (p.address) parts.push(p.address);
+      if (p.phoneNumber) parts.push(p.phoneNumber);
+      if (p.rating) parts.push(`★ ${p.rating}${p.ratingCount ? ` (${p.ratingCount})` : ''}`);
+      if (p.category) parts.push(p.category);
+      const website = p.website || mapsUrlFor(p);
+      return {
+        title: p.title,
+        url: website,
+        description: parts.join(' · '),
+        host: hostOf(website),
+        phone: p.phoneNumber,
+        address: p.address,
+        rating: p.rating,
+      };
+    });
+  }
+
   if (mode === 'news') {
-    const news = (data.results) || [];
+    const news = data.news || [];
     return news.map(r => ({
       title: r.title,
-      url: r.url,
-      description: r.description || '',
-      host: hostOf(r.url),
-      age: r.age,
+      url: r.link,
+      description: [r.source, r.date, r.snippet].filter(Boolean).join(' · '),
+      host: hostOf(r.link),
+      thumbnail: r.imageUrl,
     }));
   }
+
   if (mode === 'videos') {
-    const vids = (data.results) || [];
+    const vids = data.videos || [];
     return vids.map(r => ({
       title: r.title,
-      url: r.url,
-      host: hostOf(r.url),
-      thumbnail: r.thumbnail && (r.thumbnail.src || r.thumbnail.original),
-      duration: r.video && r.video.duration,
+      url: r.link,
+      host: hostOf(r.link),
+      thumbnail: r.imageUrl,
+      duration: r.duration,
     }));
   }
+
   if (mode === 'images') {
-    const imgs = (data.results) || [];
+    const imgs = data.images || [];
     return imgs.map(r => ({
       title: r.title,
-      url: r.url, // source page
-      host: hostOf(r.url),
-      image: r.properties && (r.properties.url || r.properties.placeholder),
-      thumbnail: r.thumbnail && r.thumbnail.src,
+      url: r.link || r.imageUrl,
+      host: hostOf(r.link || r.source || r.domain || ''),
+      image: r.imageUrl,
+      thumbnail: r.thumbnailUrl || r.imageUrl,
     }));
   }
+
   return [];
+}
+
+function mapsUrlFor(p) {
+  const q = encodeURIComponent([p.title, p.address].filter(Boolean).join(' '));
+  return `https://www.google.com/maps/search/?api=1&query=${q}`;
 }
 
 function applyFilters(items, { block, trust, mode }) {
@@ -165,16 +195,14 @@ function applyFilters(items, { block, trust, mode }) {
 
   for (const it of items) {
     if (!it.url) { filtered++; continue; }
-    // Dedupe by URL (strip trailing slash + query for a crude canonical form)
     const canon = it.url.replace(/[?#].*$/, '').replace(/\/$/, '');
     if (seen.has(canon)) { filtered++; continue; }
     seen.add(canon);
 
-    // Blocklist
-    if (matches(it.host, block)) { filtered++; continue; }
+    // Places results don't always have a website host — keep them regardless of blocklist.
+    if (mode !== 'local' && matches(it.host, block)) { filtered++; continue; }
 
-    // Spam phrase filter (web/local/news only, not image/video titles)
-    if ((mode === 'web' || mode === 'local' || mode === 'news') &&
+    if ((mode === 'web' || mode === 'news') &&
         isSpammy(it.title, it.description)) {
       filtered++;
       continue;
@@ -185,22 +213,25 @@ function applyFilters(items, { block, trust, mode }) {
     else normal.push(it);
   }
 
-  // Dedupe per host so one domain can't flood results (keep first 2 per host)
-  const perHost = new Map();
-  const dedupedNormal = [];
-  for (const it of normal) {
-    const n = perHost.get(it.host) || 0;
-    if (n >= 2) { filtered++; continue; }
-    perHost.set(it.host, n + 1);
-    dedupedNormal.push(it);
+  // Dedupe per host — one domain can't flood results (only for web/news).
+  if (mode === 'web' || mode === 'news') {
+    const perHost = new Map();
+    const deduped = [];
+    for (const it of normal) {
+      const n = perHost.get(it.host) || 0;
+      if (n >= 2) { filtered++; continue; }
+      perHost.set(it.host, n + 1);
+      deduped.push(it);
+    }
+    return { kept: [...trusted, ...deduped], filtered };
   }
 
-  return { kept: [...trusted, ...dedupedNormal], filtered };
+  return { kept: [...trusted, ...normal], filtered };
 }
 
 function isSpammy(title, desc) {
   const hay = `${title || ''} ${desc || ''}`.toLowerCase();
   let hits = 0;
   for (const p of SPAM_PHRASES) if (hay.includes(p)) hits++;
-  return hits >= 2; // only drop if multiple spam signals
+  return hits >= 2;
 }
