@@ -2,13 +2,16 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Cleanweb — search without the noise</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#FAF6EC" />
+<title>Cleanweb — search and watch the web, without the noise</title>
 <link rel="stylesheet" href="/styles.css" />
 <link rel="stylesheet" href="/drive.css" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='40' fill='%23D4A44C'/%3E%3Ccircle cx='50' cy='50' r='22' fill='%230A0E1A'/%3E%3C/svg%3E" />
+<link rel="icon" type="image/svg+xml" href="/icon.svg" />
+<link rel="apple-touch-icon" href="/icon.svg" />
+<link rel="manifest" href="/manifest.json" />
 </head>
 <body>
 
@@ -37,9 +40,13 @@
 
 <main class="app-shell" id="appShell">
   <div class="stage" id="stage">
+
     <section class="hero" id="hero">
-      <h1 class="hero-title">Search without the noise.</h1>
-      <p class="hero-sub">No ads. No directory spam. Saved by your family, not strangers.</p>
+      <div class="hero-brand">
+        <span class="brand-mark"></span>
+        <h1 class="hero-title">Search and watch the web.</h1>
+      </div>
+      <p class="hero-sub">No ads, no directory spam, no AI slop. Find clean answers, save them with your family, and let your Mac keep an eye on the pages that matter.</p>
       <form class="search-form big" id="searchForm">
         <input type="text" id="searchInput" class="search-input"
                placeholder="Try: window cleaner Newtownards" autocomplete="off" autofocus />
@@ -54,6 +61,133 @@
         <button class="hint" data-q="bird of paradise plant" data-mode="images">bird of paradise plant</button>
       </div>
       <div class="hero-family" id="heroFamily" hidden></div>
+
+      <!-- Onboarding card — shown first visit, dismissable -->
+      <div class="onboard-wrap" id="onboardWrap" hidden>
+        <div class="onboard-card">
+          <h3>New here? Cleanweb does three things.</h3>
+          <p><b>1.</b> Searches the web with ads, AI fluff and directory spam filtered out — type above to try it.</p>
+          <p><b>2.</b> <b>Watches</b> pages for you — drop in a price, an "out of stock" notice, an event listing or a social-media page, and your Mac checks on a schedule and pings you when something changes.</p>
+          <p><b>3.</b> <b>Drives</b> a real Chrome on your Mac when you want to delegate something a single search can't answer — like "find the cheapest direct flight to Lisbon next weekend".</p>
+          <div class="onboard-row">
+            <button id="onboardDismiss">Got it</button>
+            <button id="onboardLater" class="ghost">Show me later</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Launcher tiles — surface the product's real capabilities -->
+      <div class="launcher-grid-wrap" id="launcherGrid">
+        <h2 class="launcher-section-title">What can cleanweb do?</h2>
+        <p class="launcher-section-sub">Tap any tile to start. All of these run on your Mac, nothing leaves the house.</p>
+        <div class="tile-grid">
+
+          <button class="tile" data-action="search" style="--c:#FFD64A;--cd:#C97D2A;--cs:#FFF6D9;">
+            <div class="tile-icon-wrap">
+              <svg viewBox="0 0 32 32" class="tile-icon" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="14" cy="14" r="8"/><path d="m26 26-6-6"/>
+              </svg>
+            </div>
+            <div class="tile-body">
+              <span class="tile-tag">Search</span>
+              <div class="tile-name">Clean search</div>
+              <div class="tile-tagline">Ads, AI slop and Yell-style directories filtered out. Local-aware for trades.</div>
+            </div>
+          </button>
+
+          <button class="tile" data-action="watch-price" style="--c:#FF9F3D;--cd:#C97D2A;--cs:#FFE8C7;">
+            <div class="tile-icon-wrap">
+              <svg viewBox="0 0 32 32" class="tile-icon" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 4v24"/><path d="M22 10c0-2-2-4-6-4s-6 2-6 4 2 3 6 4 6 2 6 4-2 4-6 4-6-2-6-4"/>
+              </svg>
+            </div>
+            <div class="tile-body">
+              <span class="tile-tag">Watch</span>
+              <div class="tile-name">Price watch</div>
+              <div class="tile-tagline">Paste a product URL, set a target price. We'll ping you when it drops.</div>
+            </div>
+          </button>
+
+          <button class="tile" data-action="watch-stock" style="--c:#4CCB9F;--cd:#1F8A66;--cs:#D5F4E6;">
+            <div class="tile-icon-wrap">
+              <svg viewBox="0 0 32 32" class="tile-icon" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="5" y="8" width="22" height="18" rx="2"/><path d="M11 8V5a5 5 0 0 1 10 0v3"/><path d="m11 17 3 3 7-7"/>
+              </svg>
+            </div>
+            <div class="tile-body">
+              <span class="tile-tag">Watch</span>
+              <div class="tile-name">Back in stock</div>
+              <div class="tile-tagline">Watch a product page and ping you the moment "out of stock" disappears.</div>
+            </div>
+          </button>
+
+          <button class="tile" data-action="watch-events" style="--c:#FF5E8E;--cd:#C72E63;--cs:#FFE0EB;">
+            <div class="tile-icon-wrap">
+              <svg viewBox="0 0 32 32" class="tile-icon" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="5" y="7" width="22" height="20" rx="2"/><path d="M5 13h22"/><path d="M11 4v6"/><path d="M21 4v6"/><circle cx="11" cy="19" r="1.4" fill="currentColor"/><circle cx="16" cy="19" r="1.4" fill="currentColor"/><circle cx="21" cy="19" r="1.4" fill="currentColor"/>
+              </svg>
+            </div>
+            <div class="tile-body">
+              <span class="tile-tag">Skill</span>
+              <div class="tile-name">Local events</div>
+              <div class="tile-tagline">Run the saved scrapers — Belfast City Council, venue Facebook pages, etc.</div>
+            </div>
+          </button>
+
+          <button class="tile" data-action="watch-social" style="--c:#6CB4E2;--cd:#2D6FA8;--cs:#E0F0FA;">
+            <div class="tile-icon-wrap">
+              <svg viewBox="0 0 32 32" class="tile-icon" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="16" cy="16" r="11"/><path d="M5 16h22"/><path d="M16 5a17 17 0 0 1 0 22"/><path d="M16 5a17 17 0 0 0 0 22"/>
+              </svg>
+            </div>
+            <div class="tile-body">
+              <span class="tile-tag">Watch</span>
+              <div class="tile-name">Page changes</div>
+              <div class="tile-tagline">Watch a social feed, blog, or any page. Ping you when something new shows up.</div>
+            </div>
+          </button>
+
+          <button class="tile" data-action="drive" style="--c:#FFD64A;--cd:#FF5E8E;--cs:#FFF6D9;">
+            <div class="tile-icon-wrap">
+              <svg viewBox="0 0 32 32" class="tile-icon" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="4" y="6" width="24" height="18" rx="2"/><path d="M9 29h14"/><path d="M16 24v5"/><circle cx="16" cy="15" r="3"/><path d="m11 19 3-3"/><path d="m21 19-3-3"/>
+              </svg>
+            </div>
+            <div class="tile-body">
+              <span class="tile-tag">Live</span>
+              <div class="tile-name">Drive a browser</div>
+              <div class="tile-tagline">Watch a real Chrome on your Mac do a multi-step task you describe in plain English.</div>
+            </div>
+          </button>
+
+          <button class="tile" data-action="watches-list" style="--c:#4A9ED4;--cd:#2D6FA8;--cs:#E0F0FA;">
+            <div class="tile-icon-wrap">
+              <svg viewBox="0 0 32 32" class="tile-icon" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 16s5-9 14-9 14 9 14 9-5 9-14 9S2 16 2 16z"/><circle cx="16" cy="16" r="4"/>
+              </svg>
+            </div>
+            <div class="tile-body">
+              <span class="tile-tag">Manage</span>
+              <div class="tile-name">My watches</div>
+              <div class="tile-tagline">All your active watches in one list. Pause, edit, delete or run now.</div>
+            </div>
+          </button>
+
+          <button class="tile" data-action="collections" style="--c:#4CCB9F;--cd:#1F8A66;--cs:#D5F4E6;">
+            <div class="tile-icon-wrap">
+              <svg viewBox="0 0 32 32" class="tile-icon" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 8h14l3 3h7v15a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2z"/>
+              </svg>
+            </div>
+            <div class="tile-body">
+              <span class="tile-tag">Save</span>
+              <div class="tile-name">Family collections</div>
+              <div class="tile-tagline">Pages saved by your household. Trusted-by-your-people instead of by strangers.</div>
+            </div>
+          </button>
+
+        </div>
+      </div>
     </section>
 
     <section class="results-wrap" id="resultsWrap" hidden>
@@ -300,6 +434,53 @@
     <div class="modal-actions">
       <button class="btn-ghost" id="saveCancel">Cancel</button>
       <button class="btn-solid" id="saveConfirm">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Watch-preset modal (injected on demand by app.js) -->
+<div class="modal" id="watchPresetModal" hidden>
+  <div class="modal-card">
+    <h3 id="wpTitle">Set up a watch</h3>
+    <p class="modal-explain" id="wpExplain"></p>
+    <label class="row stack">
+      <span class="muted small">A name for this watch</span>
+      <input type="text" id="wpName" placeholder="e.g. Sonos Era 100 deal" />
+    </label>
+    <label class="row stack">
+      <span class="muted small">Page URL</span>
+      <input type="url" id="wpUrl" placeholder="https://…" />
+    </label>
+    <label class="row stack" id="wpSelectorWrap">
+      <span class="muted small">CSS selector for the bit to watch <span class="muted">(optional)</span></span>
+      <input type="text" id="wpSelector" placeholder="e.g. .product-price (leave blank to watch the whole page)" />
+    </label>
+    <label class="row stack" id="wpValueWrap">
+      <span class="muted small" id="wpValueLabel">Value</span>
+      <input type="text" id="wpValue" />
+    </label>
+    <div class="row gap">
+      <label class="row stack" style="flex:1;">
+        <span class="muted small">Check every</span>
+        <select id="wpSchedule">
+          <option value="1h">hour</option>
+          <option value="15m">15 minutes</option>
+          <option value="6h">6 hours</option>
+          <option value="daily">day</option>
+        </select>
+      </label>
+      <label class="row stack" style="flex:1;">
+        <span class="muted small">Notify by</span>
+        <select id="wpNotify">
+          <option value="log">server log</option>
+          <option value="speak">Kokoro speak it</option>
+          <option value="todo">push to claude-todo</option>
+        </select>
+      </label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" id="wpCancel">Cancel</button>
+      <button class="btn-solid" id="wpCreate">Create watch</button>
     </div>
   </div>
 </div>

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Cleanweb">
+  <defs>
+    <linearGradient id="cwGradWarm" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFD64A"/>
+      <stop offset="55%" stop-color="#FF9F3D"/>
+      <stop offset="100%" stop-color="#FF5E8E"/>
+    </linearGradient>
+    <linearGradient id="cwGradInk" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2D6FA8"/>
+      <stop offset="100%" stop-color="#2A2038"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="#FAF6EC"/>
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="none" stroke="url(#cwGradWarm)" stroke-width="3"/>
+  <circle cx="28" cy="28" r="13" fill="none" stroke="url(#cwGradInk)" stroke-width="3.6" stroke-linecap="round"/>
+  <line x1="38" y1="38" x2="48" y2="48" stroke="url(#cwGradInk)" stroke-width="4.2" stroke-linecap="round"/>
+  <path d="M22 28 Q 28 22 34 28" stroke="#FF9F3D" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+  <circle cx="22.5" cy="26.5" r="1.4" fill="#FFD64A"/>
+  <circle cx="33.5" cy="26.5" r="1.4" fill="#FF5E8E"/>
+</svg>

@@ -1159,3 +1159,212 @@ function toast(msg) {
   if (m) setMode(m);
   if (q) { $('#searchInput').value = q; state.query = q; runSearch(); }
 })();
+
+// =============================================================
+// Launcher tiles — surface the product's real capabilities
+// from the home page. Each tile maps to one of the existing
+// engine endpoints (watches / skills / drive mode).
+// =============================================================
+
+const ENGINE_LS_KEY = 'cleanweb.drive';
+function getEngineUrl() {
+  try {
+    const raw = localStorage.getItem(ENGINE_LS_KEY);
+    if (!raw) return 'https://cleanweb-engine.aiprofits.cc';
+    const cfg = JSON.parse(raw);
+    return (cfg.engineUrl || 'https://cleanweb-engine.aiprofits.cc').replace(/\/$/, '');
+  } catch { return 'https://cleanweb-engine.aiprofits.cc'; }
+}
+async function engineFetch(path, opts = {}) {
+  return fetch(getEngineUrl() + path, { ...opts, credentials: 'include' });
+}
+
+// Tile dispatch
+document.addEventListener('click', (e) => {
+  const tile = e.target.closest('.tile[data-action]');
+  if (!tile) return;
+  const action = tile.dataset.action;
+  switch (action) {
+    case 'search':
+      $('#searchInput').focus();
+      $('#searchInput').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      break;
+    case 'watch-price':       openWatchPreset('price'); break;
+    case 'watch-stock':       openWatchPreset('stock'); break;
+    case 'watch-social':
+    case 'watch-page':        openWatchPreset('change'); break;
+    case 'watch-events':      openEventsSkill(); break;
+    case 'watches-list':      openWatchesList(); break;
+    case 'drive':             openDriveMode(); break;
+    case 'collections':       switchToCollections(); break;
+  }
+});
+
+// =============================================================
+// Watch-preset modal — pre-fills the watch form for one of
+// three common intents, then POSTs to the engine's /api/watches.
+// =============================================================
+
+const WATCH_PRESETS = {
+  price: {
+    title: 'Watch a price drop',
+    explain: "Paste the product page URL. Optionally narrow it to the price element (e.g. .product-price). We'll re-check on your chosen schedule and ping you when it falls below your target.",
+    namePh: 'e.g. Sonos Era 100 deal',
+    selectorPh: 'e.g. .product-price (leave blank to scan the whole page)',
+    valueLabel: 'Target price (£)',
+    valuePh: 'e.g. 250',
+    valueType: 'number',
+    showValue: true,
+    showSelector: true,
+    condition: 'price-below'
+  },
+  stock: {
+    title: 'Back in stock alert',
+    explain: "Paste the product URL. We watch the page and ping you the moment the words “Out of stock” disappear. Change the wording below if the site uses different language.",
+    namePh: 'e.g. PS5 stock at Currys',
+    selectorPh: 'e.g. .availability (leave blank to scan the whole page)',
+    valueLabel: 'Phrase that means "unavailable"',
+    valuePh: 'Out of stock',
+    valueType: 'text',
+    valueDefault: 'Out of stock',
+    showValue: true,
+    showSelector: true,
+    condition: 'text-not-contains'
+  },
+  change: {
+    title: 'Watch a page for changes',
+    explain: "Paste any page URL — a social feed, a blog index, a board, a council page. We re-check on your schedule and ping you the moment something on the page is different from last time.",
+    namePh: 'e.g. Council planning page',
+    selectorPh: 'e.g. main (leave blank to watch the whole page)',
+    showValue: false,
+    showSelector: true,
+    condition: 'change'
+  }
+};
+
+let activePreset = null;
+function openWatchPreset(kind) {
+  const preset = WATCH_PRESETS[kind];
+  if (!preset) return;
+  activePreset = preset;
+  $('#wpTitle').textContent = preset.title;
+  $('#wpExplain').textContent = preset.explain;
+  $('#wpName').value = '';
+  $('#wpName').placeholder = preset.namePh;
+  $('#wpUrl').value = '';
+  $('#wpSelector').value = '';
+  $('#wpSelector').placeholder = preset.selectorPh;
+  $('#wpSelectorWrap').hidden = !preset.showSelector;
+  if (preset.showValue) {
+    $('#wpValueWrap').hidden = false;
+    $('#wpValueLabel').textContent = preset.valueLabel;
+    $('#wpValue').placeholder = preset.valuePh || '';
+    $('#wpValue').type = preset.valueType || 'text';
+    $('#wpValue').value = preset.valueDefault || '';
+  } else {
+    $('#wpValueWrap').hidden = true;
+  }
+  $('#wpSchedule').value = kind === 'price' ? '6h' : '1h';
+  $('#wpNotify').value = 'todo';
+  $('#watchPresetModal').hidden = false;
+  setTimeout(() => $('#wpUrl').focus(), 50);
+}
+
+function closeWatchPreset() {
+  $('#watchPresetModal').hidden = true;
+  activePreset = null;
+}
+
+$('#wpCancel').addEventListener('click', closeWatchPreset);
+$('#watchPresetModal').addEventListener('click', e => {
+  if (e.target === $('#watchPresetModal')) closeWatchPreset();
+});
+
+$('#wpCreate').addEventListener('click', async () => {
+  if (!activePreset) return;
+  const url = $('#wpUrl').value.trim();
+  if (!url) { toast('Paste a URL first'); $('#wpUrl').focus(); return; }
+  const name = $('#wpName').value.trim() || activePreset.namePh.replace(/^e\.g\.\s*/, '');
+  const selector = $('#wpSelector').value.trim() || null;
+  const condition = { type: activePreset.condition };
+  if (activePreset.showValue) condition.value = $('#wpValue').value.trim();
+  const body = {
+    name, url, selector,
+    schedule: $('#wpSchedule').value,
+    condition,
+    notify: [$('#wpNotify').value]
+  };
+  const btn = $('#wpCreate');
+  btn.disabled = true;
+  btn.textContent = 'Creating…';
+  try {
+    const r = await engineFetch('/api/watches', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const j = await r.json();
+    if (j.ok || r.ok) {
+      closeWatchPreset();
+      toast('Watch created. You can manage it from My watches.');
+    } else if (r.status === 401) {
+      toast('Drive Mode locked — open Drive and enter the PIN, then try again.');
+      openDriveMode();
+    } else {
+      toast('Could not create watch: ' + (j.error || r.status));
+    }
+  } catch (e) {
+    toast('Could not reach engine: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Create watch';
+  }
+});
+
+// =============================================================
+// Cross-into-drive helpers — open Drive Mode, jump to Watches
+// list, jump to Skills (events). Implemented as thin wrappers
+// that click the buttons drive.js already wired up.
+// =============================================================
+
+function openDriveMode() {
+  const btn = document.getElementById('driveToggleBtn');
+  if (btn) { btn.click(); return; }
+  // drive.js hasn't injected yet — wait a tick
+  setTimeout(openDriveMode, 100);
+}
+function openWatchesList() {
+  openDriveMode();
+  setTimeout(() => {
+    const w = document.getElementById('drvWatches');
+    if (w) w.click();
+  }, 220);
+}
+function openEventsSkill() {
+  openDriveMode();
+  setTimeout(() => {
+    const s = document.getElementById('drvSkills');
+    if (s) s.click();
+  }, 220);
+}
+
+// =============================================================
+// First-visit onboarding card — shown until dismissed.
+// =============================================================
+
+const ONBOARD_KEY = 'cleanweb.onboarded';
+(function showOnboardingIfNew() {
+  let onboarded = false;
+  try { onboarded = localStorage.getItem(ONBOARD_KEY) === '1'; } catch {}
+  if (!onboarded) {
+    const wrap = $('#onboardWrap');
+    if (wrap) wrap.hidden = false;
+  }
+})();
+$('#onboardDismiss')?.addEventListener('click', () => {
+  try { localStorage.setItem(ONBOARD_KEY, '1'); } catch {}
+  $('#onboardWrap').hidden = true;
+});
+$('#onboardLater')?.addEventListener('click', () => {
+  $('#onboardWrap').hidden = true;
+});

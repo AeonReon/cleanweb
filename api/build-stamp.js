@@ -15,7 +15,7 @@ export default function handler(req, res) {
     stamp: stampSource,
     short: stampSource.slice(-6),
     sha: sha || null,
-    version: "0.3.0",
+    version: "0.5.0",
     deployedAt: process.env.VERCEL_GIT_COMMIT_AUTHOR_DATE || null
   });
 }
