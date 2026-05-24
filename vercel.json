@@ -1,5 +1,16 @@
 {
   "functions": {
-    "api/search.js": { "memory": 256, "maxDuration": 15 }
-  }
+    "api/search.js": { "memory": 256, "maxDuration": 15 },
+    "api/build-stamp.js": { "memory": 128, "maxDuration": 5 }
+  },
+  "headers": [
+    {
+      "source": "/(index\\.html)?",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate, max-age=0" },
+        { "key": "Pragma", "value": "no-cache" },
+        { "key": "Expires", "value": "0" }
+      ]
+    }
+  ]
 }

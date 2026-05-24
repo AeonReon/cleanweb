@@ -42,6 +42,8 @@ const state = {
   collections: [],
   selected: new Set(),  // for local action bar
   lastLocalItems: [],   // so action bar can reference them
+  openPage: null,       // { url, title, host, text } when viewer is open
+  viewerMode: 'site',   // 'site' | 'reader'
 };
 
 function load(key, fallback) {
@@ -272,6 +274,16 @@ function renderList(items, isLocal) {
     results.appendChild(el);
   });
 
+  // Route result-title clicks into the in-app viewer instead of a new tab
+  results.querySelectorAll('.result h3 a').forEach((a, i) => {
+    a.addEventListener('click', e => {
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
+      e.preventDefault();
+      const it = items[i];
+      openInViewer(it.url, it.title, it);
+    });
+  });
+
   results.querySelectorAll('button[data-act="save"]').forEach(b =>
     b.addEventListener('click', () => openSaveModal(items[+b.dataset.idx])));
   results.querySelectorAll('button[data-act="block"]').forEach(b =>
@@ -330,6 +342,14 @@ function renderGrid(items) {
     grid.appendChild(card);
   });
   results.appendChild(grid);
+  results.querySelectorAll('.card .card-link').forEach((a, i) => {
+    a.addEventListener('click', e => {
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
+      e.preventDefault();
+      const it = items[i];
+      openInViewer(it.url, it.title, it);
+    });
+  });
   results.querySelectorAll('button[data-act="save"]').forEach(b =>
     b.addEventListener('click', () => openSaveModal(items[+b.dataset.idx])));
 }
@@ -803,6 +823,178 @@ async function removeSave(id, collectionName) {
 
 $('#collectionBack').addEventListener('click', () => renderCollectionsHome());
 
+// --- In-app page viewer ---
+const viewerWrap = $('#viewerWrap');
+const viewerFrame = $('#viewerFrame');
+const viewerReader = $('#viewerReader');
+const viewerReaderInner = $('#viewerReaderInner');
+const viewerLoading = $('#viewerLoading');
+const viewerBlocked = $('#viewerBlocked');
+const viewerTitle = $('#viewerTitle');
+const viewerHost = $('#viewerHost');
+const viewerFav = $('#viewerFav');
+const viewerOpenExt = $('#viewerOpenExt');
+const viewerModeSite = $('#viewerModeSite');
+const viewerModeReader = $('#viewerModeReader');
+
+let viewerBlockedTimer = null;
+let currentFetchId = 0;
+
+function openInViewer(url, title, item) {
+  if (!url) return;
+  const host = (item && item.host) || safeHost(url);
+  const fav = (item && item.favicon) || (host ? `https://icons.duckduckgo.com/ip3/${host}.ico` : '');
+  state.openPage = { url, title: title || url, host, text: '', excerpt: '', html: '', byline: '', loading: true };
+
+  viewerWrap.hidden = false;
+  document.body.classList.add('with-viewer');
+  viewerTitle.textContent = title || url;
+  viewerHost.textContent = host || '';
+  viewerFav.src = fav || '';
+  viewerOpenExt.href = url;
+  viewerBlocked.hidden = true;
+  viewerLoading.hidden = false;
+
+  // Load the page through our same-origin proxy so the iframe is readable.
+  setViewerMode('site');
+  viewerFrame.src = `/api/view?url=${encodeURIComponent(url)}`;
+  clearTimeout(viewerBlockedTimer);
+  viewerFrame.onload = () => { viewerLoading.hidden = true; };
+
+  // Kick the reader-mode pipeline in parallel so toggling Reader is instant
+  const fetchId = ++currentFetchId;
+  fetch(`/api/fetch?url=${encodeURIComponent(url)}`)
+    .then(r => r.json())
+    .then(data => {
+      if (fetchId !== currentFetchId) return;
+      if (!state.openPage || state.openPage.url !== url) return;
+      if (data.ok) {
+        state.openPage.excerpt = data.excerpt || '';
+        state.openPage.html = data.html || '';
+        state.openPage.byline = data.byline || '';
+        if (data.title && (!title || title === url)) {
+          viewerTitle.textContent = data.title;
+          state.openPage.title = data.title;
+        }
+        // If the live DOM bridge hasn't sent text yet, seed from Readability
+        if (!state.openPage.text) state.openPage.text = data.text || '';
+      }
+      state.openPage.loading = false;
+      renderReaderView();
+    })
+    .catch(() => {
+      if (state.openPage) state.openPage.loading = false;
+      renderReaderView();
+    });
+
+  updateAiPlaceholder();
+}
+
+// Listen for live-DOM snapshots posted by the injected bridge in /api/view
+window.addEventListener('message', e => {
+  const d = e.data;
+  if (!d || !d.__cleanweb || d.type !== 'page') return;
+  if (!state.openPage) return;
+  state.openPage.text = d.text || state.openPage.text;
+  if (d.title) {
+    state.openPage.title = d.title;
+    viewerTitle.textContent = d.title;
+  }
+  if (d.currentUrl && d.currentUrl !== state.openPage.url) {
+    state.openPage.url = d.currentUrl;
+    viewerOpenExt.href = d.currentUrl;
+    const h = safeHost(d.currentUrl);
+    state.openPage.host = h;
+    viewerHost.textContent = h;
+  }
+});
+
+function renderReaderView() {
+  if (!state.openPage) { viewerReaderInner.innerHTML = ''; return; }
+  const p = state.openPage;
+  if (p.loading) {
+    viewerReaderInner.innerHTML = '<p class="reader-byline">Fetching page text…</p>';
+    return;
+  }
+  if (p.fetchError) {
+    viewerReaderInner.innerHTML = `<p class="reader-byline">Couldn't fetch this page: ${esc(p.fetchError)}</p>`;
+    return;
+  }
+
+  const header = `
+    <h1>${esc(p.title)}</h1>
+    <p class="reader-byline">
+      ${p.byline ? esc(p.byline) + ' · ' : ''}${esc(p.host || '')} ·
+      <a href="${escAttr(p.url)}" target="_blank" rel="noopener">view original</a>
+    </p>`;
+
+  if (p.html) {
+    viewerReaderInner.innerHTML = header + p.html;
+    viewerReaderInner.querySelectorAll('script').forEach(s => s.remove());
+    const resolve = (attr) => (el) => {
+      const v = el.getAttribute(attr);
+      if (!v) return;
+      try { el.setAttribute(attr, new URL(v, p.url).href); } catch {}
+    };
+    viewerReaderInner.querySelectorAll('a[href]').forEach(a => {
+      resolve('href')(a);
+      a.addEventListener('click', e => {
+        if (e.metaKey || e.ctrlKey || e.shiftKey) return;
+        const href = a.getAttribute('href');
+        if (!href || href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('tel:')) return;
+        e.preventDefault();
+        openInViewer(href, a.textContent.trim().slice(0, 120), { host: safeHost(href) });
+      });
+    });
+    viewerReaderInner.querySelectorAll('img[src]').forEach(resolve('src'));
+    viewerReaderInner.querySelectorAll('img[srcset]').forEach(img => {
+      const parts = img.getAttribute('srcset').split(',').map(s => {
+        const m = s.trim().split(/\s+/);
+        try { m[0] = new URL(m[0], p.url).href; } catch {}
+        return m.join(' ');
+      });
+      img.setAttribute('srcset', parts.join(', '));
+    });
+    return;
+  }
+
+  const paras = (p.text || '').split(/\n{2,}/).filter(s => s.trim());
+  const body = paras.map(s => `<p>${esc(s).replace(/\n/g, '<br/>')}</p>`).join('');
+  viewerReaderInner.innerHTML = header + (body || '<p class="reader-byline">No readable text found.</p>');
+}
+
+function setViewerMode(mode) {
+  state.viewerMode = mode;
+  viewerModeSite.classList.toggle('active', mode === 'site');
+  viewerModeReader.classList.toggle('active', mode === 'reader');
+  viewerFrame.hidden = mode !== 'site';
+  viewerReader.hidden = mode !== 'reader';
+  if (mode === 'reader') renderReaderView();
+}
+
+function closeViewer() {
+  viewerWrap.hidden = true;
+  viewerFrame.src = 'about:blank';
+  document.body.classList.remove('with-viewer');
+  state.openPage = null;
+  viewerLoading.hidden = true;
+  viewerBlocked.hidden = true;
+  clearTimeout(viewerBlockedTimer);
+  updateAiPlaceholder();
+}
+
+function safeHost(u) { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return ''; } }
+
+function updateAiPlaceholder() {
+  const input = $('#aiText');
+  if (!input) return;
+  input.placeholder = state.openPage ? 'Ask about this page…' : 'Ask about these results…';
+}
+
+$('#viewerClose').addEventListener('click', closeViewer);
+viewerModeSite.addEventListener('click', () => setViewerMode('site'));
+viewerModeReader.addEventListener('click', () => setViewerMode('reader'));
+
 // --- AI sidebar (LM Studio) ---
 const aiSidebar = $('#aiSidebar');
 const aiBody = $('#aiBody');
@@ -885,7 +1077,7 @@ async function aiSubmit() {
   if (!q) return;
   $('#aiText').value = '';
 
-  const context = buildAiContext();
+  const { userPrompt, systemPrompt } = buildAiPrompt(q);
   appendAiMessage('user', q);
   const assistantEl = appendAiMessage('assistant', '…');
 
@@ -896,8 +1088,8 @@ async function aiSubmit() {
       body: JSON.stringify({
         model: state.ai.model || 'local-model',
         messages: [
-          { role: 'system', content: 'You are a succinct assistant inside cleanweb, a private search app. Be direct and terse. Use the provided search results to answer.' },
-          { role: 'user', content: `Search query: "${state.query}"\nMode: ${state.mode}\n\nResults:\n${context}\n\nQuestion: ${q}` },
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
         ],
         temperature: 0.3,
         stream: false,
@@ -913,11 +1105,29 @@ async function aiSubmit() {
   }
 }
 
-function buildAiContext() {
+function buildAiPrompt(question) {
+  const p = state.openPage;
+  if (p && (p.text || p.excerpt)) {
+    const pageText = (p.text || p.excerpt || '').slice(0, 12000);
+    return {
+      systemPrompt: 'You are a succinct assistant inside cleanweb, a private research browser. Answer questions about the page the user is currently viewing. Be direct and terse. Quote relevant lines when useful. If the page text is incomplete or missing, say so.',
+      userPrompt: `Currently viewing: ${p.title}\nURL: ${p.url}\n\nPage content:\n"""\n${pageText}\n"""\n\nQuestion: ${question}`,
+    };
+  }
+  if (p && p.loading) {
+    return {
+      systemPrompt: 'You are a succinct assistant inside cleanweb.',
+      userPrompt: `The user is opening ${p.url} but the page text hasn't finished loading yet. Ask them to wait a second or answer from the title/URL if you can.\n\nQuestion: ${question}`,
+    };
+  }
   const items = state.lastResults.slice(0, 10);
-  return items.map((it, i) =>
+  const context = items.map((it, i) =>
     `${i+1}. ${it.title}\n   ${it.host || ''} ${it.phone ? '· ' + it.phone : ''}${it.rating ? ' · ★' + it.rating : ''}\n   ${it.description || ''}`
   ).join('\n\n');
+  return {
+    systemPrompt: 'You are a succinct assistant inside cleanweb, a private search app. Be direct and terse. Use the provided search results to answer.',
+    userPrompt: `Search query: "${state.query}"\nMode: ${state.mode}\n\nResults:\n${context}\n\nQuestion: ${question}`,
+  };
 }
 
 function appendAiMessage(role, text) {

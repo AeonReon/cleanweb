@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Cleanweb — search without the noise</title>
 <link rel="stylesheet" href="/styles.css" />
+<link rel="stylesheet" href="/drive.css" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='40' fill='%23D4A44C'/%3E%3Ccircle cx='50' cy='50' r='22' fill='%230A0E1A'/%3E%3C/svg%3E" />
@@ -82,6 +83,38 @@
         <p>No clean results. Try a different query or relax the filters in settings.</p>
       </div>
       <div id="errorBox" class="error-box" hidden></div>
+    </section>
+
+    <!-- In-app page viewer -->
+    <section class="viewer-wrap" id="viewerWrap" hidden>
+      <div class="viewer-toolbar">
+        <button class="icon-btn" id="viewerClose" title="Back to results" aria-label="Back to results">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <div class="viewer-addr">
+          <img class="viewer-fav" id="viewerFav" alt="" />
+          <span class="viewer-title" id="viewerTitle"></span>
+          <span class="viewer-host" id="viewerHost"></span>
+        </div>
+        <div class="viewer-actions">
+          <button class="viewer-tab" id="viewerModeSite" data-mode="site">Site</button>
+          <button class="viewer-tab" id="viewerModeReader" data-mode="reader">Reader</button>
+          <a class="viewer-ext" id="viewerOpenExt" target="_blank" rel="noopener" title="Open in new tab">↗</a>
+        </div>
+      </div>
+      <div class="viewer-body">
+        <iframe class="viewer-frame" id="viewerFrame" referrerpolicy="no-referrer" sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>
+        <div class="viewer-reader" id="viewerReader" hidden>
+          <div class="viewer-reader-inner" id="viewerReaderInner"></div>
+        </div>
+        <div class="viewer-loading" id="viewerLoading" hidden>
+          <div class="spinner"></div>
+          <span>loading…</span>
+        </div>
+        <div class="viewer-blocked" id="viewerBlocked" hidden>
+          <p>This site won't load in the frame. Showing reader view instead.</p>
+        </div>
+      </div>
     </section>
 
     <!-- Collections view -->
@@ -274,8 +307,42 @@
 <!-- Toast -->
 <div class="toast" id="toast" hidden></div>
 
+<!-- Build pill (always visible, low-opacity) + reload banner injected by JS -->
+<div class="cw-version-pill" id="cwVersionPill" hidden></div>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="/app.js"></script>
+<script src="/drive.js"></script>
+<script>
+  // iOS PWA cache-busting — poll /api/build-stamp, swap pill when changed.
+  (function () {
+    const pill = document.getElementById("cwVersionPill");
+    let initial = null;
+    async function check() {
+      try {
+        const r = await fetch("/api/build-stamp", { cache: "no-store" });
+        if (!r.ok) return;
+        const j = await r.json();
+        const short = (j.short || j.stamp || "dev").slice(-6);
+        if (pill) {
+          pill.textContent = "v" + (j.version || "?") + " · " + short;
+          pill.hidden = false;
+        }
+        if (initial === null) { initial = j.stamp; return; }
+        if (j.stamp && j.stamp !== initial && !document.getElementById("cwReloadBanner")) {
+          const b = document.createElement("div");
+          b.id = "cwReloadBanner";
+          b.className = "cw-reload-banner";
+          b.textContent = "🔄  New version available — tap to reload";
+          b.addEventListener("click", () => location.reload());
+          document.body.appendChild(b);
+        }
+      } catch {}
+    }
+    check();
+    setInterval(check, 60000);
+  })();
+</script>
 </body>
 </html>
