@@ -16,6 +16,14 @@
     autoStart: false
   };
 
+  // Wrap fetch so every engine call sends the auth cookie. Without this,
+  // 25/30 calls would silently 401 once auth is enabled.
+  async function api(path, opts = {}) {
+    const full = cfg.engineUrl.replace(/\/$/, "") + path;
+    const merged = { ...opts, credentials: "include" };
+    return fetch(full, merged);
+  }
+
   function loadCfg() {
     try {
       const raw = localStorage.getItem(LS_KEY);
@@ -52,6 +60,7 @@
             <span class="pill" id="drvStatus">idle</span>
             <div class="head-spacer"></div>
             <span class="now-doing drv-hidden" id="drvNowDoing"><span class="nd-spin"></span><span id="drvNowDoingText">—</span></span>
+            <button id="drvSettings" class="icon-help" title="Settings (change PIN, engine URL)" aria-label="Settings">⚙</button>
             <button id="drvVault" class="icon-help" title="Vault (logins)" aria-label="Vault">🔐</button>
             <button id="drvWatches" class="icon-help" title="Watches (URL monitors)" aria-label="Watches">👁</button>
             <button id="drvSkills" class="icon-help" title="Skills (scrapers)" aria-label="Skills">🛠</button>
@@ -213,7 +222,7 @@
     setDot("drvEngineDot", "amber");
     val.textContent = "checking…";
     try {
-      const r = await fetch(cfg.engineUrl.replace(/\/$/, "") + "/health", { cache: "no-store" });
+      const r = await api("/health", { cache: "no-store" });
       if (!r.ok) throw new Error("status " + r.status);
       const j = await r.json();
       val.textContent = `ok · ${j.sessions}/${j.maxSessions}`;
@@ -364,7 +373,7 @@
     log("user", "✏️ <i>drew a box, asking:</i> " + esc(question || "explain this"));
     setNowDoing("Reading that region…");
     try {
-      const r2 = await fetch(cfg.engineUrl.replace(/\/$/, "") + `/api/session/${state.sessionId}/ask-region`, {
+      const r2 = await api(`/api/session/${state.sessionId}/ask-region`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ bbox, question })
@@ -406,7 +415,7 @@
     const body = document.getElementById("drvVaultBody");
     if (!body) return;
     try {
-      const r = await fetch(cfg.engineUrl.replace(/\/$/, "") + "/api/vault/status");
+      const r = await api("/api/vault/status");
       const j = await r.json();
       if (!j.unlocked) {
         body.innerHTML = `
@@ -424,7 +433,7 @@
         return;
       }
       // Unlocked — show entries + add form + cookie capture.
-      const er = await fetch(cfg.engineUrl.replace(/\/$/, "") + "/api/vault/entries");
+      const er = await api("/api/vault/entries");
       const ej = await er.json();
       body.innerHTML = `
         <div class="vault-block">
@@ -477,7 +486,7 @@
       document.querySelectorAll(".delete-entry").forEach(b => {
         b.onclick = async () => {
           if (!confirm("Delete vault entry for " + b.getAttribute("data-domain") + "?")) return;
-          await fetch(cfg.engineUrl.replace(/\/$/, "") + "/api/vault/entries/" + encodeURIComponent(b.getAttribute("data-domain")), { method: "DELETE" });
+          await api("/api/vault/entries/" + encodeURIComponent(b.getAttribute("data-domain")), { method: "DELETE" });
           renderVaultBody();
         };
       });
@@ -499,7 +508,7 @@
     const msg = document.getElementById("vMsg");
     msg.textContent = "unlocking…";
     try {
-      const r = await fetch(cfg.engineUrl.replace(/\/$/, "") + "/api/vault/unlock", {
+      const r = await api("/api/vault/unlock", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pin })
@@ -514,7 +523,7 @@
   }
 
   async function lockVault() {
-    await fetch(cfg.engineUrl.replace(/\/$/, "") + "/api/vault/lock", { method: "POST" });
+    await api("/api/vault/lock", { method: "POST" });
     renderVaultBody();
   }
 
@@ -526,7 +535,7 @@
       notes: document.getElementById("vNotes").value.trim() || null
     };
     if (!body.domain) { alert("domain required"); return; }
-    const r = await fetch(cfg.engineUrl.replace(/\/$/, "") + "/api/vault/entries", {
+    const r = await api("/api/vault/entries", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body)
@@ -543,7 +552,7 @@
     if (!state.sessionId) { msg.textContent = "no active session"; return; }
     msg.textContent = "capturing…";
     try {
-      const r = await fetch(cfg.engineUrl.replace(/\/$/, "") + "/api/vault/save-cookies/" + state.sessionId, {
+      const r = await api("/api/vault/save-cookies/" + state.sessionId, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ domain })
@@ -662,7 +671,7 @@
             document.getElementById("wNotifyTodo").checked ? "todo" : null
           ].filter(Boolean)
         };
-        const r = await fetch(cfg.engineUrl.replace(/\/$/, "") + "/api/watches", {
+        const r = await api("/api/watches", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body)
@@ -686,7 +695,7 @@
     async function renderList() {
       const wrap = document.getElementById("drvWatchesList");
       try {
-        const r = await fetch(cfg.engineUrl.replace(/\/$/, "") + "/api/watches");
+        const r = await api("/api/watches");
         const j = await r.json();
         if (!j.watches || j.watches.length === 0) {
           wrap.innerHTML = `<p class="muted">No watches yet. Use the form above to create one.</p>`;
@@ -763,17 +772,17 @@
       try {
         if (act === "run") {
           btn.textContent = "Running…";
-          await fetch(cfg.engineUrl.replace(/\/$/, "") + "/api/watches/" + id + "/run-now", { method: "POST" });
+          await api("/api/watches/" + id + "/run-now", { method: "POST" });
         } else if (act === "toggle") {
-          const cur = (await (await fetch(cfg.engineUrl.replace(/\/$/, "") + "/api/watches")).json()).watches.find(w => w.id === id);
-          await fetch(cfg.engineUrl.replace(/\/$/, "") + "/api/watches/" + id, {
+          const cur = (await (await api("/api/watches")).json()).watches.find(w => w.id === id);
+          await api("/api/watches/" + id, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ enabled: !cur.enabled })
           });
         } else if (act === "delete") {
           if (!confirm("Delete this watch?")) { btn.disabled = false; wrap.addEventListener("click", onWatchAction, { once: true }); return; }
-          await fetch(cfg.engineUrl.replace(/\/$/, "") + "/api/watches/" + id, { method: "DELETE" });
+          await api("/api/watches/" + id, { method: "DELETE" });
         }
       } finally {
         renderList();
@@ -805,7 +814,7 @@
     div.addEventListener("click", (e) => { if (e.target === div) div.remove(); });
 
     try {
-      const r = await fetch(cfg.engineUrl.replace(/\/$/, "") + "/api/skills");
+      const r = await api("/api/skills");
       const j = await r.json();
       const list = document.getElementById("drvSkillsList");
       if (!j.skills || j.skills.length === 0) {
@@ -844,7 +853,7 @@
       btn.textContent = "Running all…";
       btn.disabled = true;
       try {
-        const r = await fetch(cfg.engineUrl.replace(/\/$/, "") + "/api/skills/run-all", {
+        const r = await api("/api/skills/run-all", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ merge: true, speak: speakIt })
@@ -866,7 +875,7 @@
   async function runSkillByApi(id, { merge = true, speak = false } = {}) {
     appendSkillLog(`▶ ${id} …`);
     try {
-      const r = await fetch(cfg.engineUrl.replace(/\/$/, "") + "/api/skills/" + id + "/run", {
+      const r = await api("/api/skills/" + id + "/run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ merge, speak })
@@ -908,7 +917,7 @@
     document.getElementById("drvDiagClose").onclick = () => div.remove();
     div.addEventListener("click", (e) => { if (e.target === div) div.remove(); });
     try {
-      const r = await fetch(cfg.engineUrl.replace(/\/$/, "") + "/api/diagnose", { cache: "no-store" });
+      const r = await api("/api/diagnose", { cache: "no-store" });
       const j = await r.json();
       const html = j.steps.map(s =>
         `<div class="diag-step ${s.ok ? "ok" : "fail"}">
@@ -1057,7 +1066,7 @@
     chat.scrollTop = chat.scrollHeight;
 
     try {
-      const r = await fetch(cfg.engineUrl.replace(/\/$/, "") + "/api/help/ask", {
+      const r = await api("/api/help/ask", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question: q })
@@ -1093,7 +1102,7 @@
     if (helpFullLoaded) return;
     helpFullLoaded = true;
     try {
-      const r = await fetch(cfg.engineUrl.replace(/\/$/, "") + "/api/help");
+      const r = await api("/api/help");
       const md = await r.text();
       // Minimal markdown-to-HTML: headings, lists, code, bold, links.
       const html = md
@@ -1113,15 +1122,169 @@
     }
   }
 
+  // ===== Auth =====
+  //
+  // First time the overlay opens we hit /api/auth/status. If not authed we
+  // throw up a full-card PIN entry — nothing else in the overlay is reachable
+  // until you've logged in. Default PIN is 1234 (the user should change it
+  // immediately via ⚙ Settings).
+
+  async function ensureAuth() {
+    let status;
+    try {
+      const r = await api("/api/auth/status", { credentials: "include" });
+      status = await r.json();
+    } catch (e) {
+      log("error", "engine unreachable: " + esc(e.message));
+      return false;
+    }
+    if (status.authed) {
+      if (status.defaultPin) showDefaultPinNag();
+      return true;
+    }
+    showLoginOverlay();
+    return false;
+  }
+
+  function showLoginOverlay() {
+    if (document.getElementById("drvLoginOverlay")) return;
+    const div = document.createElement("div");
+    div.id = "drvLoginOverlay";
+    div.className = "help-overlay";
+    div.innerHTML = `
+      <div class="help-card" style="max-width:420px;">
+        <h2>🔒 Cleanweb is locked</h2>
+        <p class="muted small">First time? Default PIN is <b>1234</b>. Change it under ⚙ Settings once you're in.</p>
+        <div class="login-form">
+          <input type="password" id="loginPin" placeholder="PIN" inputmode="numeric" autocomplete="off" autofocus/>
+          <button id="loginBtn" class="primary">Unlock</button>
+        </div>
+        <p id="loginMsg" class="muted small" style="min-height:1.2em;"></p>
+      </div>`;
+    document.body.appendChild(div);
+    const submit = async () => {
+      const pin = document.getElementById("loginPin").value;
+      const msg = document.getElementById("loginMsg");
+      msg.textContent = "unlocking…";
+      try {
+        const r = await api("/api/auth/login", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pin })
+        });
+        const j = await r.json();
+        if (j.ok) {
+          div.remove();
+          if (j.defaultPin) showDefaultPinNag();
+        } else {
+          msg.textContent = "✕ " + (j.error || "failed");
+        }
+      } catch (e) { msg.textContent = "✕ " + e.message; }
+    };
+    document.getElementById("loginBtn").onclick = submit;
+    document.getElementById("loginPin").addEventListener("keydown", (e) => { if (e.key === "Enter") submit(); });
+  }
+
+  function showDefaultPinNag() {
+    if (document.getElementById("pinNag")) return;
+    const nag = document.createElement("div");
+    nag.id = "pinNag";
+    nag.className = "pin-nag";
+    nag.innerHTML = "🔓 You're using the default PIN <b>1234</b>. Change it in ⚙ Settings.";
+    document.body.appendChild(nag);
+    setTimeout(() => nag.classList.add("show"), 100);
+  }
+
+  async function logout() {
+    try {
+      await api("/api/auth/logout", { method: "POST", credentials: "include" });
+    } catch {}
+    location.reload();
+  }
+
+  // ===== Settings (Change PIN + Logout) =====
+  function showSettings() {
+    if (document.getElementById("drvSettingsOverlay")) return;
+    const div = document.createElement("div");
+    div.id = "drvSettingsOverlay";
+    div.className = "help-overlay";
+    div.innerHTML = `
+      <div class="help-card" style="max-width:480px;">
+        <button class="help-close" id="drvSettingsClose" aria-label="Close">×</button>
+        <h2>⚙ Settings</h2>
+
+        <h3>Change app PIN</h3>
+        <p class="muted small">This is the PIN that unlocks Cleanweb itself. (The 🔐 Vault PIN is separate.)</p>
+        <div class="settings-form">
+          <label>Current PIN <input type="password" id="setOldPin" inputmode="numeric" autocomplete="off"/></label>
+          <label>New PIN <input type="password" id="setNewPin" inputmode="numeric" autocomplete="off"/></label>
+          <label>Confirm new PIN <input type="password" id="setNewPin2" inputmode="numeric" autocomplete="off"/></label>
+          <button id="setChangePin" class="primary">Change PIN</button>
+          <span id="setMsg" class="muted small"></span>
+        </div>
+
+        <h3 style="margin-top:18px;">Engine URL</h3>
+        <p class="muted small">Where the UI talks to the engine. Defaults to <code>https://cleanweb-engine.aiprofits.cc</code>. Only change if you're on the Mac mini and want to skip the tunnel.</p>
+        <div class="settings-form">
+          <input type="text" id="setEngineUrl" placeholder="https://cleanweb-engine.aiprofits.cc" value="${esc(cfg.engineUrl)}"/>
+          <button id="setSaveEngine" class="ghost-mini">Save</button>
+        </div>
+
+        <h3 style="margin-top:18px;">Session</h3>
+        <button id="setLogout" class="ghost-mini" style="border-color:#e2c5c5;color:#b13a3a;">Log out</button>
+      </div>`;
+    document.body.appendChild(div);
+    document.getElementById("drvSettingsClose").onclick = () => div.remove();
+    div.addEventListener("click", (e) => { if (e.target === div) div.remove(); });
+
+    document.getElementById("setChangePin").onclick = async () => {
+      const oldPin = document.getElementById("setOldPin").value;
+      const newPin = document.getElementById("setNewPin").value;
+      const newPin2 = document.getElementById("setNewPin2").value;
+      const msg = document.getElementById("setMsg");
+      if (!newPin || newPin.length < 4) { msg.textContent = "✕ new PIN must be 4+ characters"; return; }
+      if (newPin !== newPin2) { msg.textContent = "✕ new PINs don't match"; return; }
+      msg.textContent = "changing…";
+      try {
+        const r = await api("/api/auth/change-pin", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ currentPin: oldPin, newPin })
+        });
+        const j = await r.json();
+        if (j.ok) {
+          msg.textContent = "✓ PIN changed. Old cookies invalidated.";
+          document.getElementById("pinNag")?.remove();
+          ["setOldPin","setNewPin","setNewPin2"].forEach(id => document.getElementById(id).value = "");
+        } else {
+          msg.textContent = "✕ " + (j.error || "failed");
+        }
+      } catch (e) { msg.textContent = "✕ " + e.message; }
+    };
+
+    document.getElementById("setSaveEngine").onclick = () => {
+      cfg.engineUrl = (document.getElementById("setEngineUrl").value || DEFAULT_CFG.engineUrl).trim();
+      saveCfg(cfg);
+      $("drvEngineUrl").value = cfg.engineUrl;
+      pingEngine();
+    };
+
+    document.getElementById("setLogout").onclick = logout;
+  }
+
   // ---------- session control ----------
   async function startSession() {
     if (state.busy) return;
+    if (!(await ensureAuth())) { setStatus("locked", "warn"); return; }
     state.busy = true;
     $("drvStart").disabled = true;
     setStatus("starting…", "busy");
     try {
-      const r = await fetch(cfg.engineUrl.replace(/\/$/, "") + "/api/session", {
+      const r = await api("/api/session", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: "about:blank" })
       });
@@ -1151,7 +1314,7 @@
 
   async function stopSession() {
     if (!state.sessionId) return;
-    try { await fetch(cfg.engineUrl.replace(/\/$/, "") + "/api/session/" + state.sessionId, { method: "DELETE" }); } catch {}
+    try { await api("/api/session/" + state.sessionId, { method: "DELETE" }); } catch {}
     closeStreams();
     state.sessionId = null;
     setStatus("idle");
@@ -1285,7 +1448,7 @@
     const send = async () => {
       const reply = $("drvAskInput").value.trim();
       if (!reply) return;
-      await fetch(cfg.engineUrl.replace(/\/$/, "") + `/api/session/${state.sessionId}/answer`, {
+      await api(`/api/session/${state.sessionId}/answer`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reply })
@@ -1303,7 +1466,7 @@
     const url = $("drvUrl").value.trim();
     if (!url) return;
     try {
-      const r = await fetch(cfg.engineUrl.replace(/\/$/, "") + `/api/session/${state.sessionId}/navigate`, {
+      const r = await api(`/api/session/${state.sessionId}/navigate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url })
@@ -1326,7 +1489,7 @@
     setStatus("thinking…", "busy");
     setNowDoing("Reading the page…");
     try {
-      const r = await fetch(cfg.engineUrl.replace(/\/$/, "") + `/api/session/${state.sessionId}/instruct`, {
+      const r = await api(`/api/session/${state.sessionId}/instruct`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ instruction })
@@ -1340,11 +1503,14 @@
     }
   }
 
-  function open() {
+  async function open() {
     state.open = true;
     $("driveOverlay").setAttribute("data-open", "true");
     $("drvEngineUrl").value = cfg.engineUrl;
     pingEngine();
+    // First thing: make sure we're authed. If not, the login overlay
+    // appears and blocks everything else.
+    await ensureAuth();
   }
   function close() {
     state.open = false;
@@ -1370,6 +1536,7 @@
     $("drvSkills").addEventListener("click", showSkills);
     $("drvWatches").addEventListener("click", showWatches);
     $("drvVault").addEventListener("click", showVault);
+    $("drvSettings").addEventListener("click", showSettings);
     $("drvDrawToggle").addEventListener("click", () => setDrawMode(!drawMode));
     const canvas = document.getElementById("drvDrawCanvas");
     canvas.addEventListener("mousedown", onDrawMouseDown);
