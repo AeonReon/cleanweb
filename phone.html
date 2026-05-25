@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#FAF6EC" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#3F8FCB" media="(prefers-color-scheme: dark)" />
+<title>Cleanweb — say it, get it</title>
+<link rel="stylesheet" href="/styles.css" />
+<link rel="stylesheet" href="/phone.css" />
+<link rel="icon" type="image/svg+xml" href="/icon.svg" />
+<link rel="apple-touch-icon" href="/icon.svg" />
+<link rel="manifest" href="/manifest.json" />
+<script>
+  // If someone opens phone.html on a wide screen, bounce them to the desktop view.
+  if (window.matchMedia("(min-width: 769px)").matches) {
+    location.replace("/");
+  }
+</script>
+</head>
+<body class="phone">
+
+<!-- ============================================================
+     HOME — chat top + feed below + More launcher fixed bottom
+     ============================================================ -->
+<section class="ph-screen" data-screen="home" id="screenHome">
+  <header class="ph-head">
+    <div class="ph-brand">
+      <span class="ph-mark"></span>
+      <span class="ph-name">cleanweb</span>
+    </div>
+    <button class="ph-icon-btn" id="phThemeBtn" aria-label="Theme" title="Theme">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+    </button>
+  </header>
+
+  <div class="ph-feed" id="phFeed">
+    <div class="ph-welcome" id="phWelcome">
+      <h1 class="ph-hello">Hello.</h1>
+      <p class="ph-sub">Tell me what you want. I'll figure it out and come back with options for you to approve.</p>
+      <div class="ph-examples">
+        <button class="ph-ex" data-ex="Find me the best Berkey water filter under £300 and watch it for a price drop">
+          <span class="ph-ex-emoji">💧</span>
+          <span class="ph-ex-text">Watch a Berkey water filter for the historic low price</span>
+        </button>
+        <button class="ph-ex" data-ex="What's on at Bangor Castle Park this weekend?">
+          <span class="ph-ex-emoji">🎪</span>
+          <span class="ph-ex-text">What's on at Bangor Castle Park this weekend</span>
+        </button>
+        <button class="ph-ex" data-ex="Find three cheerful facts about octopuses">
+          <span class="ph-ex-emoji">🐙</span>
+          <span class="ph-ex-text">Three cheerful facts about octopuses</span>
+        </button>
+      </div>
+    </div>
+    <!-- Conversation cards get appended here once the user sends -->
+  </div>
+
+  <form class="ph-input-row" id="phInputRow">
+    <textarea
+      id="phInput"
+      class="ph-input"
+      placeholder="Say what you'd like done…"
+      rows="1"
+      autocomplete="off"></textarea>
+    <button type="submit" id="phSend" class="ph-send" aria-label="Send">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+    </button>
+  </form>
+
+  <button class="ph-more-btn" id="phMoreBtn" aria-label="More tools">
+    <span class="ph-more-dots">⋯</span>
+    <span class="ph-more-label">More</span>
+  </button>
+</section>
+
+<!-- ============================================================
+     MORE — app-icon tiles for the manual tools
+     ============================================================ -->
+<section class="ph-screen" data-screen="more" id="screenMore" hidden>
+  <header class="ph-head">
+    <button class="ph-icon-btn" id="phMoreBack" aria-label="Back">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+    </button>
+    <span class="ph-screen-title">More tools</span>
+    <span class="ph-spacer"></span>
+  </header>
+
+  <div class="ph-tiles">
+
+    <button class="ph-tile" data-tool="watches" style="--c:#4A9ED4;--cd:#2D6FA8;--cs:#E0F0FA;">
+      <div class="ph-tile-icon">
+        <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2 16s5-9 14-9 14 9 14 9-5 9-14 9S2 16 2 16z"/><circle cx="16" cy="16" r="4"/>
+        </svg>
+      </div>
+      <div class="ph-tile-name">Watches</div>
+      <div class="ph-tile-tag">URL monitors</div>
+    </button>
+
+    <button class="ph-tile" data-tool="skills" style="--c:#FF9F3D;--cd:#C97D2A;--cs:#FFE8C7;">
+      <div class="ph-tile-icon">
+        <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 4 4 9l11 11 5-5z"/><path d="m14 13 8 8"/><path d="m21 14 7 7-3 3-7-7"/>
+        </svg>
+      </div>
+      <div class="ph-tile-name">Skills</div>
+      <div class="ph-tile-tag">Saved scrapers</div>
+    </button>
+
+    <button class="ph-tile" data-tool="vault" style="--c:#4CCB9F;--cd:#1F8A66;--cs:#D5F4E6;">
+      <div class="ph-tile-icon">
+        <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="6" y="14" width="20" height="14" rx="2"/><path d="M10 14V9a6 6 0 0 1 12 0v5"/>
+        </svg>
+      </div>
+      <div class="ph-tile-name">Vault</div>
+      <div class="ph-tile-tag">Logins for skills</div>
+    </button>
+
+    <button class="ph-tile" data-tool="drive" style="--c:#FFD64A;--cd:#FF5E8E;--cs:#FFF6D9;">
+      <div class="ph-tile-icon">
+        <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="4" y="6" width="24" height="18" rx="2"/><path d="M9 29h14"/><path d="M16 24v5"/><circle cx="16" cy="15" r="3"/>
+        </svg>
+      </div>
+      <div class="ph-tile-name">Drive Mode</div>
+      <div class="ph-tile-tag">Watch it browse</div>
+    </button>
+
+    <button class="ph-tile" data-tool="search" style="--c:#FFD64A;--cd:#C97D2A;--cs:#FFF6D9;">
+      <div class="ph-tile-icon">
+        <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="14" cy="14" r="8"/><path d="m26 26-6-6"/>
+        </svg>
+      </div>
+      <div class="ph-tile-name">Clean search</div>
+      <div class="ph-tile-tag">No spam, no AI slop</div>
+    </button>
+
+    <button class="ph-tile" data-tool="settings" style="--c:#A89BB4;--cd:#5C4B6B;--cs:#F4EEDD;">
+      <div class="ph-tile-icon">
+        <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="16" cy="16" r="3.5"/><path d="M25 19a2 2 0 0 0 .4 2.2l.1.1a2.4 2.4 0 1 1-3.4 3.4l-.1-.1a2 2 0 0 0-2.2-.4 2 2 0 0 0-1.2 1.8V26a2.4 2.4 0 1 1-4.8 0v-.1a2 2 0 0 0-1.3-1.8 2 2 0 0 0-2.2.4l-.1.1a2.4 2.4 0 1 1-3.4-3.4l.1-.1a2 2 0 0 0 .4-2.2 2 2 0 0 0-1.8-1.2H5a2.4 2.4 0 1 1 0-4.8h.1A2 2 0 0 0 6.9 11a2 2 0 0 0-.4-2.2l-.1-.1a2.4 2.4 0 1 1 3.4-3.4l.1.1a2 2 0 0 0 2.2.4H12a2 2 0 0 0 1.2-1.8V4a2.4 2.4 0 1 1 4.8 0v.1a2 2 0 0 0 1.2 1.8 2 2 0 0 0 2.2-.4l.1-.1a2.4 2.4 0 1 1 3.4 3.4l-.1.1a2 2 0 0 0-.4 2.2v.1A2 2 0 0 0 26 13H26a2.4 2.4 0 1 1 0 4.8h-.1A2 2 0 0 0 25 19z"/>
+        </svg>
+      </div>
+      <div class="ph-tile-name">Settings</div>
+      <div class="ph-tile-tag">PIN, engine URL</div>
+    </button>
+
+  </div>
+
+  <p class="ph-more-foot">
+    These are the manual controls. The homepage chat will handle most of this on its own once we wire the next wave.
+  </p>
+</section>
+
+<script src="/phone.js"></script>
+</body>
+</html>

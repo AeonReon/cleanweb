@@ -1600,6 +1600,22 @@
         } catch {}
       }
     });
+
+    // Deep-link routing from the phone shell. The phone "More" tiles open
+    // /?open=drive#<tool>, so when this page loads we auto-open Drive Mode
+    // and then click the matching tool button.
+    const params = new URLSearchParams(location.search);
+    if (params.get("open") === "drive") {
+      open();
+      const tool = (location.hash || "").replace(/^#/, "");
+      const toolBtnId = {
+        watches:  "drvWatches",
+        skills:   "drvSkills",
+        vault:    "drvVault",
+        settings: "drvSettings",
+      }[tool];
+      if (toolBtnId) setTimeout(() => document.getElementById(toolBtnId)?.click(), 60);
+    }
   }
 
   if (document.readyState === "loading") {

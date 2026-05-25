@@ -5,6 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="theme-color" content="#FAF6EC" />
 <title>Cleanweb — search and watch the web, without the noise</title>
+<script>
+  // Phone visitors get the chat-first shell at /phone.html.
+  // Skip if a query param explicitly opted in to the desktop view (?desktop=1)
+  // or if the desktop launcher requested a specific tool via ?open=…
+  (function () {
+    if (location.pathname !== "/") return;
+    if (location.search.includes("desktop=1")) return;
+    if (location.search.includes("open=")) return;
+    if (window.matchMedia("(max-width: 768px)").matches) {
+      location.replace("/phone.html" + location.hash);
+    }
+  })();
+</script>
 <link rel="stylesheet" href="/styles.css" />
 <link rel="stylesheet" href="/drive.css" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
