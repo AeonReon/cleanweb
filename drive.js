@@ -51,6 +51,7 @@
     tpl.innerHTML = `
       <div class="drive-overlay" id="driveOverlay" role="dialog" aria-label="Drive Mode">
         <div class="drive-shell">
+          <button id="drvCloseFloat" class="drv-close-float" aria-label="Close Drive Mode" title="Close">✕</button>
           <header class="drive-head">
             <div class="brand">
               <span class="brand-mark small"></span>
@@ -1152,7 +1153,8 @@
     div.id = "drvLoginOverlay";
     div.className = "help-overlay";
     div.innerHTML = `
-      <div class="help-card" style="max-width:420px;">
+      <div class="help-card" style="max-width:420px;position:relative;">
+        <button id="loginBack" class="help-close" aria-label="Close">×</button>
         <h2>🔒 Cleanweb is locked</h2>
         <p class="muted small">First time? Default PIN is <b>1234</b>. Change it under ⚙ Settings once you're in.</p>
         <div class="login-form">
@@ -1184,6 +1186,7 @@
     };
     document.getElementById("loginBtn").onclick = submit;
     document.getElementById("loginPin").addEventListener("keydown", (e) => { if (e.key === "Enter") submit(); });
+    document.getElementById("loginBack").onclick = () => { div.remove(); close(); };
   }
 
   function showDefaultPinNag() {
@@ -1527,6 +1530,17 @@
     });
 
     $("drvClose").addEventListener("click", close);
+    $("drvCloseFloat").addEventListener("click", close);
+
+    // Tap the dimmed backdrop to dismiss any help-overlay (vault, watches, skills, diag, help, settings).
+    // The login overlay opts out — closing it would leave you in an unauthed Drive Mode.
+    document.addEventListener("click", (e) => {
+      const ov = e.target.closest(".help-overlay");
+      if (!ov) return;
+      if (e.target !== ov) return; // tapped inside the card, not the backdrop
+      if (ov.id === "drvLoginOverlay") return;
+      ov.remove();
+    });
     $("drvStart").addEventListener("click", startSession);
     $("drvStop").addEventListener("click", stopSession);
     $("drvGo").addEventListener("click", go);

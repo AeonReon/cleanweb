@@ -683,17 +683,21 @@
 .help-overlay li { margin: 4px 0; color: var(--drv-ink); }
 .help-overlay .help-close {
   position: absolute;
-  top: 12px;
-  right: 12px;
-  width: 32px;
-  height: 32px;
+  top: 10px;
+  right: 10px;
+  width: 40px;
+  height: 40px;
   border: 1px solid var(--drv-line);
   background: var(--drv-card);
   border-radius: 50%;
-  font: 700 18px/1 var(--sans, system-ui);
+  font: 700 20px/1 var(--sans, system-ui);
   color: var(--drv-mute);
   cursor: pointer;
   z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
 }
 .help-overlay .help-close:hover { color: var(--drv-ink); border-color: var(--drv-accent); }
 .help-overlay .leg {
@@ -1294,10 +1298,38 @@
 @media (max-width: 900px) {
   .drive-shell {
     grid-template-columns: 1fr;
-    grid-template-rows: 60px 50vh 1fr;
+    grid-template-rows: 60px 35vh 1fr;
   }
   .drive-chat { border-left: none; border-top: 1px solid var(--drv-line); }
+  .drive-head {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-right: 52px; /* leave room for floating ✕ */
+  }
+  .drive-head::-webkit-scrollbar { display: none; }
 }
+
+/* Floating close — always reachable on phone even if header buttons overflow */
+.drv-close-float {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  border: 1px solid var(--drv-line);
+  background: var(--drv-card);
+  color: var(--drv-ink);
+  font: 700 18px/1 var(--sans, system-ui);
+  cursor: pointer;
+  z-index: 5;
+  box-shadow: 0 4px 12px rgba(42, 32, 56, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.drv-close-float:hover { color: var(--drv-err); border-color: var(--drv-err); }
 
 /* HTML [hidden] must always win over class display:flex/grid */
 [hidden] { display: none !important; }
